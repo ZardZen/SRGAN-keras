@@ -10,7 +10,6 @@ import tensorflow as tf
 from keras import backend as K
 from keras.losses import mean_absolute_error, mean_squared_error
 from keras.applications.vgg19 import VGG19
-import Utils_model, Utils
 
 from keras.models import Model
 
@@ -68,13 +67,13 @@ def args_parse():
                     help="path to npy. files to train")
 #     ap.add_argument("-mpath", "--model_path", default="model_save/", required=False,
 #                     help="path to save the output model")
-    ap.add_argument("-lpath", "--log_path", default="log/", required=False,
-                    help="path to save the 'log' files")
-    ap.add_argument("-name","--model_name", default="edsr.h5", required=False,
-                    help="output of model name")
+#     ap.add_argument("-lpath", "--log_path", default="log/", required=False,
+#                     help="path to save the 'log' files")
+#     ap.add_argument("-name","--model_name", default="edsr.h5", required=False,
+#                     help="output of model name")
     # ========= parameters for training
-    ap.add_argument("-p", "--pretrain", default=0, required=False, type=int,
-                    help="load pre-train model or not")
+#     ap.add_argument("-p", "--pretrain", default=0, required=False, type=int,
+#                     help="load pre-train model or not")
 
 #     ap.add_argument('-bs', '--batch_size', default=2, type=int,
 #                     help='batch size')
@@ -91,12 +90,12 @@ def args_parse():
                     help='Path for model')
     ap.add_argument('-b', '--batch_size', action='store', dest='batch_size', default=8,
                     help='Batch Size', type=int)                   
-    ap.add_argument('-e', '--epochs', action='store', dest='epochs', default=1000 ,
+    ap.add_argument('-e', '--epochs', action='store', dest='epochs', default=10 ,
                     help='number of iteratios for trainig', type=int)                   
-    ap.add_argument('-n', '--number_of_images', action='store', dest='number_of_images', default=1000 ,
-                    help='Number of Images', type= int)                    
-    ap.add_argument('-r', '--train_test_ratio', action='store', dest='train_test_ratio', default=0.8 ,
-                    help='Ratio of train and test Images', type=float)
+#     ap.add_argument('-n', '--number_of_images', action='store', dest='number_of_images', default=1000 ,
+#                     help='Number of Images', type= int)                    
+#     ap.add_argument('-r', '--train_test_ratio', action='store', dest='train_test_ratio', default=0.8 ,
+#                     help='Ratio of train and test Images', type=float)
     
     args = vars(ap.parse_args())
     return args
@@ -109,19 +108,14 @@ def train(args):
     #X_val = np.load(args["npy_path"] + 'X_val.npy')
     y_train = np.load(args["npy_path"] + 'hr.npy')
     #y_val = np.load(args["npy_path"] + 'y_val.npy')
-#     if args["pretrain"]:
-#         model = load_model(args["model_path"] + args["model_name"],
-#                        custom_objects={'loss': mae, 'psnr': psnr})
-#     else:
-#         model = edsr(scale, num_filters=256, num_res_blocks=32, res_block_scaling=0.1, tanh_activation=False)
+
     loss = VGG_LOSS(image_shape) 
-    
     batch_count = int(y_train.shape[0] / batch_size)
     
-    lr_decay = ReduceLROnPlateau(monitor='loss', factor=0.5, patience=10, verbose=1, min_lr=1e-5)
-    checkpointer = ModelCheckpoint(args["model_path"] + args["model_name"], verbose=1, save_best_only=True)
-    tensorboard = TensorBoard(log_dir=args["log_path"])
-    callback_list = [lr_decay, checkpointer, tensorboard]
+#     lr_decay = ReduceLROnPlateau(monitor='loss', factor=0.5, patience=10, verbose=1, min_lr=1e-5)
+#     checkpointer = ModelCheckpoint(args["model_path"] + args["model_name"], verbose=1, save_best_only=True)
+#     tensorboard = TensorBoard(log_dir=args["log_path"])
+#     callback_list = [lr_decay, checkpointer, tensorboard]
 
     #optimizer = SGD(lr=1e-5, momentum=args["momentum"], nesterov=False)
     optimizer = Adam(lr=1e-4, beta_1=0.9, beta_2=0.999)
@@ -132,7 +126,7 @@ def train(args):
     D.compile(loss="binary_crossentropy", optimizer=optimizer)
     
     gan = srgan(G, D)
-    gan.compile(loss=[vgg_loss, "binary_crossentropy"],
+    gan.compile(loss=[loss.vgg_loss, "binary_crossentropy"],
                 loss_weights=[1., 1e-3],
                 optimizer=optimizer)
     #gan.summary()
