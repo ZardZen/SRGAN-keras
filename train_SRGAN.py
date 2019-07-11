@@ -9,20 +9,57 @@ from keras.utils import multi_gpu_model
 import tensorflow as tf
 from keras import backend as K
 from keras.losses import mean_absolute_error, mean_squared_error
-
+from keras.applications.vgg19 import VGG19
 import Utils_model, Utils
-from Utils_model import VGG_LOSS
+
+from keras.models import Model
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "1"
 
-def mae(hr, sr):
-    hr, sr = _crop_hr_in_training(hr, sr)
-    return mean_absolute_error(hr, sr)
+class VGG_LOSS(object):
+    def __init__(self, image_shape):  
+        self.image_shape = image_shape
+    # computes VGG loss or content loss
+    def vgg_loss(self, y_true, y_pred): 
+        vgg19 = VGG19(include_top=False, weights='imagenet', input_shape=self.image_shape)
+        vgg19.trainable = False
+        # Make trainable as False
+        for l in vgg19.layers:
+            l.trainable = False
+        model = Model(inputs=vgg19.input, outputs=vgg19.get_layer('block5_conv4').output)
+        model.trainable = False  
+        return K.mean(K.square(model(y_true) - model(y_pred)))  
 
-def psnr(hr, sr):
-    hr, sr = _crop_hr_in_training(hr, sr)
-    return tf.image.psnr(hr, sr, max_val=255)
+def get_optimizer():
+    adam = Adam(lr=1E-4, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
+    return adam
 
+# def plot_generated_images(output_dir, epoch, generator, x_test_hr, x_test_lr , dim=(1, 3), figsize=(15, 5)):
+
+#     examples = x_test_hr.shape[0]
+#     print(examples)
+#     value = randint(0, examples)
+#     image_batch_hr = denormalize(x_test_hr)
+#     image_batch_lr = x_test_lr
+#     gen_img = generator.predict(image_batch_lr)
+#     generated_image = denormalize(gen_img)
+#     image_batch_lr = denormalize(image_batch_lr)
+
+#     plt.figure(figsize=figsize) 
+#     plt.subplot(dim[0], dim[1], 1)
+#     plt.imshow(image_batch_lr[value], interpolation='nearest')
+#     plt.axis('off')      
+#     plt.subplot(dim[0], dim[1], 2)
+#     plt.imshow(generated_image[value], interpolation='nearest')
+#     plt.axis('off')  
+#     plt.subplot(dim[0], dim[1], 3)
+#     plt.imshow(image_batch_hr[value], interpolation='nearest')
+#     plt.axis('off')   
+#     plt.tight_layout()
+#     plt.savefig(output_dir + 'generated_image_%d.png' % epoch)
+#     plt.close()
+
+    #plt.show()
 def args_parse():
     # construct the argument parse and parse the arguments
     ap = argparse.ArgumentParser(description='Keras Training')
@@ -66,7 +103,8 @@ def args_parse():
 
 
 def train(args):
-    scale = 2
+    scale = 4
+    image_shape = (384,384,3)
     X_train = np.load(args["npy_path"] + 'lr.npy')
     #X_val = np.load(args["npy_path"] + 'X_val.npy')
     y_train = np.load(args["npy_path"] + 'hr.npy')
@@ -76,6 +114,9 @@ def train(args):
 #                        custom_objects={'loss': mae, 'psnr': psnr})
 #     else:
 #         model = edsr(scale, num_filters=256, num_res_blocks=32, res_block_scaling=0.1, tanh_activation=False)
+    loss = VGG_LOSS(image_shape) 
+    
+    batch_count = int(y_train.shape[0] / batch_size)
     
     lr_decay = ReduceLROnPlateau(monitor='loss', factor=0.5, patience=10, verbose=1, min_lr=1e-5)
     checkpointer = ModelCheckpoint(args["model_path"] + args["model_name"], verbose=1, save_best_only=True)
@@ -94,9 +135,11 @@ def train(args):
     gan.compile(loss=[vgg_loss, "binary_crossentropy"],
                 loss_weights=[1., 1e-3],
                 optimizer=optimizer)
-    gan.summary()
-    
-     for e in range(1, epochs+1):
+    #gan.summary()
+    loss_file = open(model_save_dir + 'losses.txt' , 'w+')
+
+    loss_file.close()
+    for e in range(1, epochs+1):
         print ('-'*15, 'Epoch %d' % e, '-'*15)
         for _ in tqdm(range(batch_count)):
        
@@ -131,8 +174,8 @@ def train(args):
         loss_file.write('epoch%d : gan_loss = %s ; discriminator_loss = %f\n' %(e, gan_loss, discriminator_loss) )
         loss_file.close()
 
-        if e == 1 or e % 5 == 0:
-            Utils.plot_generated_images(output_dir, e, G, x_test_hr, x_test_lr)
+#         if e == 1 or e % 5 == 0:
+#             Utils.plot_generated_images(output_dir, e, G, x_test_hr, x_test_lr)
         if e % 5 == 0:
             G.save(model_save_dir + 'gen_model%d.h5' % e)
             D.save(model_save_dir + 'dis_model%d.h5' % e)          
