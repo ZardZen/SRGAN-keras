@@ -74,7 +74,7 @@ def generator(num_filters=64, num_res_blocks=16):
     return sr_resnet(num_filters, num_res_blocks)
 
 def discriminator(num_filters=64):
-    x_in = Input(shape=(HR_SIZE, HR_SIZE, 3))
+    x_in = Input(shape=(None, None, 3))
     x = Normalization_m11()(x_in)
 
     x = discr_block(x, num_filters, bn=False)
