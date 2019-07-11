@@ -140,7 +140,7 @@ def train(args):
             rand_nums = np.random.randint(0, y_train.shape[0], size=batch_size)
             image_batch_hr = y_train[rand_nums]
             image_batch_lr = X_train[rand_nums]
-            generated_images_sr = generator.predict(image_batch_lr)
+            generated_images_sr = G.predict(image_batch_lr)
 
             real_data_Y = np.ones(batch_size) - np.random.random_sample(batch_size)*0.2
             fake_data_Y = np.random.random_sample(batch_size)*0.2
