@@ -46,8 +46,6 @@ def args_parse():
 #     ap.add_argument("-name","--model_name", default="edsr.h5", required=False,
 #                     help="output of model name")
     # ========= parameters for training
-#     ap.add_argument("-p", "--pretrain", default=0, required=False, type=int,
-#                     help="load pre-train model or not")
 
 #     ap.add_argument('-bs', '--batch_size', default=2, type=int,
 #                     help='batch size')
@@ -60,7 +58,7 @@ def args_parse():
                     help='Path for input images')                 
     ap.add_argument('-o', '--output_dir', action='store', dest='output_dir', default='./output/' ,
                     help='Path for Output images')
-    ap.add_argument('-mpath', '--model_save_dir', action='store', dest='model_save_dir', default='./model/' ,
+    ap.add_argument('-mpath', '--model_save_dir', action='store', dest='model_save_dir', default='./model_save/' ,
                     help='Path for model')
     ap.add_argument('-b', '--batch_size', action='store', dest='batch_size', default=8,
                     help='Batch Size', type=int)                   
